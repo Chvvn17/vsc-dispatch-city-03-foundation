@@ -4,5 +4,4 @@ metadata:
   name: simulation-config
   namespace: food-delivery
 data:
-  APP_MODE: standalone
-  TICK_MS: "2000"
+  APP_MODE: distributed
