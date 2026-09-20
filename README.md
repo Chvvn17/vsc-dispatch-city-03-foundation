@@ -1,39 +1,114 @@
-# Block 3 - Kubernetes Foundation
+# Dispatch City
 
-Dieser Baustein ist der lauffaehige fachliche Startpunkt: Eine Go-API simuliert Restaurants, Kunden, Kuriere und Bestellungen im Speicher. Das Nuxt-Dashboard stellt von Anfang an eine interaktive 21x21-Tile-Stadt mit Strassen, Gebaeuden, Parks und animierten Fahrtrouten dar.
+Dieses Repository enthält ein iteratives, cloud-natives Food-Delivery-Projekt, das über mehrere Unterrichtsblöcke hinweg aufgebaut wurde. Ziel ist die Umsetzung einer verteilten Anwendung auf Kubernetes mit Frontend, API, Messaging, Persistenz, Observability und Autoscaling.
 
-## Verwendung im Kurs
+Das Projekt zeigt den gesamten Aufbau einer modernen Systemarchitektur: Von der ersten lauffähigen Grundlage über die Integration von RabbitMQ und PostgreSQL bis hin zur Überwachung und automatischen Skalierung mit einem Horizontal Pod Autoscaler.
 
-- Oeffentliche Grundlage fuer Arbeitsblatt 3 und als GitHub-Template vorbereitet
-- Pro Einzelperson oder Zweierteam entsteht daraus genau ein eigenes Repository
-- Dieses Repository wird in den folgenden Unterrichtsbloecken fortlaufend erweitert
-- Fuer einen reproduzierbaren Start ist der Release `v1.0.0` zu verwenden
+Das Repository stellt damit kein einzelnes Lab dar, sondern die schrittweise Entwicklung eines kompletten, verteilten Systems. Die einzelnen Blöcke bauen logisch aufeinander auf und ergänzen sich zu einer Gesamtarchitektur aus Infrastruktur, Services, Datenhaltung und Betriebsfähigkeit.
 
-## Enthalten
+## Projektziel
 
-- `apps/dashboard`: Nuxt 4 und PixiJS fuer die 2.5D-Stadt
-- `cmd/control-api`: REST-, SSE-, Health- und Metrics-Endpunkte
-- `deploy/base`: Namespace, ConfigMap, Deployments und Services
-- `deploy/overlays/block-03-standalone`: erster deploybarer Stand
-- Multi-Stage-Dockerfiles und Build-/Import-Skripte
+Die Anwendung modelliert eine kleine Stadt mit Restaurants, Kunden, Kuriere, Bestellungen und Zustandsänderungen. Die visuellen Zustände werden im Dashboard dargestellt, während die Daten und Ereignisse im Hintergrund durch mehrere Services verarbeitet werden.
 
-## Arbeitsauftrag
+## Überblick über die Architektur
 
-1. Images bauen und deren Layer, Groesse und Tags untersuchen.
-2. Deployment, Service, ConfigMap, Ressourcenlimits und Probes nachvollziehen.
-3. Den Stand in k3d deployen und die internen DNS-Namen aus einem Debug-Pod testen.
-4. `control-api` und `dashboard` skalieren und das Verhalten der Services beobachten.
-5. Einen Pod loeschen und Self-Healing sowie Readiness dokumentieren.
-6. Im Standalone-Modus beobachten, wie ein Kurier zuerst auf der Strasse zum Restaurant, danach zum Kunden und schliesslich als freie Flottenentitaet an der letzten Position bleibt.
+Die Anwendung besteht aus mehreren Komponenten, die zusammen ein verteiltes System bilden:
 
-## Start
+- Frontend / Dashboard: Nuxt + PixiJS zeigt die Stadt und den aktuellen Betriebszustand
+- Control API: REST-, SSE-, Health- und Metrics-Endpunkte
+- Simulations- und Worker-Komponenten: Kunden, Kuriere, Bestellungen und Restaurant-Logik
+- Messaging: RabbitMQ übernimmt die Kommunikation zwischen Services
+- Persistenz: PostgreSQL speichert Daten und Zustände dauerhaft
+- Observability: Metriken, Healthchecks und Visualisierung über Prometheus/Grafana
+- Autoscaling: HPA überwacht die CPU-Auslastung und skaliert Pods automatisch
+
+## Systemaufbau
+
+![Software Architektur](/software_architektur.png)
+
+Gesamtarchitektur der Dispatch-City-Anwendung mit Frontend, Control API, Messaging, Persistenz, Observability und automatischer Skalierung durch den Horizontal Pod Autoscaler.
+
+## Verlauf des Projekts
+
+Das Repository wurde über mehrere Blöcke hinweg erweitert:
+
+- Block 03: Basis-Setup, Kubernetes-Foundation und erste lauffähige Anwendung
+- Block 05: Messaging mit RabbitMQ
+- Block 06: Persistenz mit PostgreSQL und Migrations-/Repository-Schicht
+- Block 07: Observability und Autoscaling mit HPA
+
+Damit bildet das Projekt einen durchgängigen Lernpfad von einfacher Containerisierung bis zur skalierbaren cloud-nativen Anwendung.
+
+## HPA-Teil (Block 07)
+
+Ein zentraler Teil des Projekts ist das skalierbare Web-Deployment im HPA-Lab:
+
+- Namespace: `betrieb-lab`
+- Deployment: `lab-web`
+- MinReplicas: 2
+- MaxReplicas: 4
+- CPU-Ziel: 50%
+- ScaleDown-Stabilisierung: 60s
+
+Konfigurationsdateien:
+
+- `labs/block-07/hpa.yaml`
+- `labs/block-07/web.yaml`
+- `labs/block-07/load.sh`
+- `labs/block-07/load.ps1`
+
+## Lokaler Start
+
+Voraussetzungen:
+
+- Go
+- Node.js / npm
+- Docker oder Container Runtime
+- Kubernetes-Cluster (z. B. k3d)
+
+Beispiel:
 
 ```bash
 go test -race ./...
 cd apps/dashboard && npm install && npm run typecheck && cd ../..
 make images load deploy-03
-kubectl --context k3d-delivery-lab -n food-delivery port-forward service/dashboard 3000:3000
-kubectl --context k3d-delivery-lab -n food-delivery port-forward service/control-api 8081:8080
 ```
 
-Abnahme: Dashboard und API sind erreichbar, beide Healthchecks sind gruen, die Stadt bewegt sich ohne Teleportation und die DNS-Aufloesung im Cluster ist nachgewiesen.
+Für die HPA-Demo:
+
+```bash
+kubectl --context k3d-teko-k8s apply -f labs/block-07/web.yaml
+kubectl --context k3d-teko-k8s apply -f labs/block-07/hpa.yaml
+kubectl --context k3d-teko-k8s -n betrieb-lab get hpa -w
+```
+
+Last erzeugen:
+
+```bash
+./labs/block-07/load.sh
+```
+
+Oder unter Windows:
+
+```powershell
+.\labs\block-07\load.ps1
+```
+
+## Erwartetes Verhalten
+
+Bei steigender CPU-Auslastung sollte der HPA automatisch zusätzliche Pods starten, und nach Ende der Last wieder auf den minimalen Wert skalieren. Damit wird das Verhalten eines cloud-native, elastischen Systems im Kubernetes-Cluster nachgewiesen.
+
+## Lernziele des Gesamtprojekts
+
+Das Projekt demonstriert die wichtigsten Schwerpunkte einer modernen cloud-nativen Anwendung:
+
+- Containerisierung und Deployment
+- Service-Interaktion über API und Messaging
+- Zustandsverwaltung und Persistenz
+- Monitoring und Observability
+- Resilience und Self-Healing
+- Automatisches Horizontal Scaling
+
+## Abschlussbemerkung
+
+Das Repository stellt nicht nur ein einzelnes Lab dar, sondern die komplette Entwicklung eines verteilten, skalierbaren Systems. Der HPA-Teil ist dabei nur einer der letzten Schritte auf dem Weg zu einer echten cloud-nativen Betriebsarchitektur.
