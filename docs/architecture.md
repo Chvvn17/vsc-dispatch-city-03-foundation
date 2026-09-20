@@ -50,3 +50,35 @@ Der Order Worker ist der einzige Schreiber des fachlichen Zustands. Er verarbeit
 4. Transaktion committen und erst danach die RabbitMQ-Nachricht bestätigen.
 
 Die Anwendungen verwenden den von CloudNativePG verwalteten `food-delivery-db-rw`-Service. Dieser zeigt nach einem Failover automatisch auf den neuen Primary.
+
+## Block 7: Observability und Autoscaling
+
+Prometheus sammelt Metriken aus den Services und aus der Persistenzschicht. Die Anwendungen stellen ihre Metriken über `/metrics` bereit. `ServiceMonitor`- und `PodMonitor`-Ressourcen beschreiben, welche Endpunkte Prometheus überwacht. Grafana visualisiert die gesammelten Werte in einem projektspezifischen Dashboard.
+
+```mermaid
+flowchart LR
+    API[Control API /metrics]
+    Workers[Worker /metrics]
+    RabbitMQ[RabbitMQ metrics]
+    PostgreSQL[CloudNativePG metrics]
+    Prometheus[Prometheus]
+    Grafana[Grafana Dashboard]
+    Observer[Cluster Observer]
+    API --> Prometheus
+    Workers --> Prometheus
+    RabbitMQ --> Prometheus
+    PostgreSQL --> Prometheus
+    Observer --> API
+    Prometheus --> Grafana
+```
+
+Der `cluster-observer` liest den Zustand der Pods, Services, Deployments, Ingress-Ressourcen und des CloudNativePG-Clusters über eine eingeschränkte Kubernetes-Rolle aus. Die Control API kann diesen Betriebszustand zusammen mit der Simulation an das Dashboard weitergeben.
+
+Zusätzlich weist das HPA-Lab die automatische Skalierung nach. Der `HorizontalPodAutoscaler` skaliert das Deployment `lab-web` im Namespace `betrieb-lab` abhängig von der CPU-Auslastung:
+
+- mindestens 2 Replicas
+- höchstens 4 Replicas
+- Zielwert: 50 Prozent durchschnittliche CPU-Auslastung
+- Stabilisierung beim Herunterskalieren: 60 Sekunden
+
+Unter Last werden zusätzliche Pods gestartet. Nach Ende des Lasttests reduziert der HPA die Replica-Anzahl wieder, sobald die Stabilisierung abgelaufen ist. Die Konfiguration befindet sich in `labs/block-07/hpa.yaml`; der Lasttest ist in `labs/block-07/load.sh` und `labs/block-07/load.ps1` dokumentiert.
