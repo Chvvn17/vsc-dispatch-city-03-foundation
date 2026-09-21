@@ -24,7 +24,7 @@ Die Anwendung besteht aus mehreren Komponenten, die zusammen ein verteiltes Syst
 
 ## Systemaufbau
 
-![Software Architektur](/software_architektur.png)
+![Software Architektur](/aerbeitsblaetter/software_architektur.png)
 
 Gesamtarchitektur der Dispatch-City-Anwendung mit Frontend, Control API, Messaging, Persistenz, Observability und automatischer Skalierung durch den Horizontal Pod Autoscaler.
 
